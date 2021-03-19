@@ -1,16 +1,18 @@
-import {useState, useEffect} from 'react';
+import { useState, useEffect } from 'react';
 
 const useFetch = (url) => {
-    
+
     const [data, setData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        fetch(url)
+        const abortController = new AbortController();
+
+        fetch(url, { signal: abortController.signal })
             .then((res) => {
                 if (!res.ok) {
-                  throw Error('Could not fetch data, something went wrong!!')
+                    throw Error('Could not fetch data, something went wrong!!')
                 }
                 return res.json()
             })
@@ -19,10 +21,18 @@ const useFetch = (url) => {
                 setIsLoading(false)
                 setError(null);
             }).catch(error => {
-                setIsLoading(false);
-                setError(error.message);                
+                if (error.name === 'AbortError') {
+                    console.log('fetch aborted');
+                } else {
+                    setIsLoading(false);
+                    setError(error.message);
+                }
             })
-    }, []);
+        // clearn up function
+        return () => abortController.abort();
+
+    }, [url]);
+
 
     return { data, isLoading, error };
 }
